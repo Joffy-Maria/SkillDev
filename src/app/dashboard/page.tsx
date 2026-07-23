@@ -64,9 +64,9 @@ export default function StudentDashboardPage() {
     setActiveTaskModal(null);
   };
 
-  const dailyTasks = tasks.filter((t) => t.type === 'daily' && !t.isArchived);
-  const completedCount = dailyTasks.filter((t) => completedTaskIds.includes(t.id)).length;
-  const progressPercent = dailyTasks.length > 0 ? (completedCount / dailyTasks.length) * 100 : 0;
+  const activeTasks = tasks.filter((t) => !t.isArchived);
+  const completedCount = activeTasks.filter((t) => completedTaskIds.includes(t.id)).length;
+  const progressPercent = activeTasks.length > 0 ? (completedCount / activeTasks.length) * 100 : 0;
   const levelDetails = user ? calculateLevelProgress(user.xp || 0) : null;
 
   return (
@@ -119,7 +119,7 @@ export default function StudentDashboardPage() {
           <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
             <Target className="w-4 h-4 text-[#C9A227]" /> Today&apos;s Completion
           </h3>
-          <ProgressRing progress={progressPercent} size={150} label={`${completedCount}/${dailyTasks.length}`} sublabel="Daily Tasks Done" />
+          <ProgressRing progress={progressPercent} size={150} label={`${completedCount}/${activeTasks.length}`} sublabel="Tasks Completed" />
           <p className="text-xs text-zinc-400">
             Complete daily tasks to build your <span className="text-[#C9A227] font-bold">{user?.currentStreak || 0}-day streak</span>!
           </p>
@@ -203,21 +203,21 @@ export default function StudentDashboardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#C9A227]" /> Today&apos;s Coding Tasks
+            <Sparkles className="w-5 h-5 text-[#C9A227]" /> Assigned Placement Tasks
           </h2>
           <Link href="/tasks" className="text-xs text-[#C9A227] hover:underline font-semibold">
             View All Tasks &rarr;
           </Link>
         </div>
 
-        {dailyTasks.length === 0 ? (
+        {activeTasks.length === 0 ? (
           <Card className="p-8 text-center space-y-2 border-dashed border-white/10">
             <p className="text-sm font-bold text-zinc-300">No tasks have been assigned yet.</p>
             <p className="text-xs text-zinc-500">Check back later or launch the Monaco Playground to practice custom problems.</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dailyTasks.map((task) => {
+            {activeTasks.map((task) => {
               const isCompleted = completedTaskIds.includes(task.id);
               return (
                 <Card key={task.id} className="flex flex-col justify-between space-y-4">

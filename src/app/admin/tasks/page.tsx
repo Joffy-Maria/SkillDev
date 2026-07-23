@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { fetchTasks, createTaskInSupabase, deleteTaskInSupabase } from '@/services/supabaseService';
 import { TaskItem, TaskDifficulty, TaskType, CategoryType } from '@/types';
-import { CheckSquare, Plus, Trash2, Zap, Clock } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, Zap, Clock, AlertTriangle } from 'lucide-react';
 
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -32,6 +33,8 @@ export default function AdminTasksPage() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
+
     const newTask: TaskItem = {
       id: `task-${Date.now()}`,
       title,
@@ -46,7 +49,11 @@ export default function AdminTasksPage() {
       createdAt: new Date().toISOString(),
     };
 
-    await createTaskInSupabase(newTask);
+    const result = await createTaskInSupabase(newTask);
+    if (!result.success && result.error) {
+      setApiError(result.error);
+    }
+
     setTasks([newTask, ...tasks]);
     setIsModalOpen(false);
     setTitle('');
@@ -75,6 +82,13 @@ export default function AdminTasksPage() {
           <Plus className="w-4 h-4 mr-1" /> Create New Task
         </Button>
       </div>
+
+      {apiError && (
+        <div className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+          <span>Supabase Notice: {apiError}. (Task is cached locally for session).</span>
+        </div>
+      )}
 
       {/* Task List */}
       {tasks.length === 0 ? (
