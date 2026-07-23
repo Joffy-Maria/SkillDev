@@ -11,8 +11,8 @@ import { Modal } from '@/components/ui/modal';
 import {
   fetchTasks,
   fetchWeeklyPerformer,
-  markTaskCompleteInFirestore,
-} from '@/services/firebaseService';
+  markTaskCompleteInSupabase,
+} from '@/services/supabaseService';
 import { TaskItem, WeeklyPerformer } from '@/types';
 import { calculateLevelProgress } from '@/lib/utils';
 import {
@@ -59,7 +59,7 @@ export default function StudentDashboardPage() {
   const handleCompleteTask = async (task: TaskItem) => {
     if (!user) return;
     setCompletedTaskIds((prev) => [...prev, task.id]);
-    await markTaskCompleteInFirestore(user.uid, task);
+    await markTaskCompleteInSupabase(user.uid, task);
     triggerGoldConfetti();
     setActiveTaskModal(null);
   };

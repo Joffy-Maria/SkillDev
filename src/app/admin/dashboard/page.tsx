@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { fetchAllStudents, fetchTasks, fetchTopics, fetchMaterials } from '@/services/firebaseService';
+import { fetchAllStudents, fetchTasks, fetchTopics, fetchMaterials } from '@/services/supabaseService';
 import { UserProfile, TaskItem, StudyTopic, StudyMaterial } from '@/types';
 import { Shield, Users, CheckSquare, Zap, Plus, Award, BookOpen, FolderTree } from 'lucide-react';
 import Link from 'next/link';

@@ -26,6 +26,7 @@ export interface TaskItem {
   id: string;
   title: string;
   description: string;
+  category?: CategoryType;
   type: TaskType;
   difficulty: TaskDifficulty;
   xpReward: number; // Easy: 10, Medium: 20, Hard: 40

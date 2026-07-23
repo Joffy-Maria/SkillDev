@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
-import { fetchAllStudents } from '@/services/firebaseService';
+import { fetchAllStudents } from '@/services/supabaseService';
 import { UserProfile } from '@/types';
 import { Trophy, Crown, Flame, Award, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';

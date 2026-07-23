@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { fetchAllStudents, fetchTasks } from '@/services/firebaseService';
+import { fetchAllStudents, fetchTasks } from '@/services/supabaseService';
 import { UserProfile, TaskItem } from '@/types';
-import { BarChart3, TrendingUp, Activity, Users, CheckSquare, Zap } from 'lucide-react';
+import { BarChart3, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AdminAnalyticsPage() {
@@ -42,25 +42,25 @@ export default function AdminAnalyticsPage() {
       {/* KPI Overview Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="space-y-1">
-          <span className="text-xs text-zinc-400 font-bold uppercase">Active Students</span>
+          <span className="text-xs text-[#FAFAFA]/60 font-bold uppercase">Active Students</span>
           <p className="text-3xl font-extrabold text-white font-mono">{activeStudents}</p>
           <span className="text-xs text-zinc-500 font-mono">Out of {students.length} registered</span>
         </Card>
 
         <Card className="space-y-1">
-          <span className="text-xs text-zinc-400 font-bold uppercase">Total Solved Code</span>
+          <span className="text-xs text-[#FAFAFA]/60 font-bold uppercase">Total Solved Code</span>
           <p className="text-3xl font-extrabold text-emerald-400 font-mono">{totalCompletedTasks}</p>
           <span className="text-xs text-zinc-500">Tasks completed by students</span>
         </Card>
 
         <Card className="space-y-1">
-          <span className="text-xs text-zinc-400 font-bold uppercase">Total Platform XP</span>
+          <span className="text-xs text-[#FAFAFA]/60 font-bold uppercase">Total Platform XP</span>
           <p className="text-3xl font-extrabold text-[#C9A227] font-mono">{totalXp}</p>
           <span className="text-xs text-zinc-500">XP accumulated</span>
         </Card>
 
         <Card className="space-y-1">
-          <span className="text-xs text-zinc-400 font-bold uppercase">Available Tasks</span>
+          <span className="text-xs text-[#FAFAFA]/60 font-bold uppercase">Available Tasks</span>
           <p className="text-3xl font-extrabold text-white font-mono">{tasks.length}</p>
           <span className="text-xs text-zinc-500">Assigned challenges</span>
         </Card>
@@ -72,7 +72,7 @@ export default function AdminAnalyticsPage() {
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-[#C9A227]" /> Weekly Task Completion Activity
           </h3>
-          <span className="text-xs text-zinc-400 font-mono">Live Firestore Data</span>
+          <span className="text-xs text-zinc-400 font-mono">Live Supabase PostgREST Data</span>
         </div>
 
         {totalCompletedTasks === 0 ? (

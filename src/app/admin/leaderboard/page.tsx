@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { fetchAllStudents, publishWeeklyPerformer, fetchWeeklyPerformer } from '@/services/firebaseService';
+import { fetchAllStudents, publishWeeklyPerformer, fetchWeeklyPerformer } from '@/services/supabaseService';
 import { UserProfile, WeeklyPerformer } from '@/types';
 import { Trophy, Award, Sparkles, CheckCircle2 } from 'lucide-react';
 import { triggerGoldConfetti } from '@/components/ui/confetti';

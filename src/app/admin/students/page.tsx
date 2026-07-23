@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { fetchAllStudents } from '@/services/firebaseService';
+import { fetchAllStudents } from '@/services/supabaseService';
 import { UserProfile } from '@/types';
 import { Users, Search, Flame, Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';

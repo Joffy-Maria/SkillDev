@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { triggerGoldConfetti } from '@/components/ui/confetti';
 import { Modal } from '@/components/ui/modal';
-import { fetchTasks, markTaskCompleteInFirestore } from '@/services/firebaseService';
+import { fetchTasks, markTaskCompleteInSupabase } from '@/services/supabaseService';
 import { TaskItem } from '@/types';
 import { CheckSquare, Clock, Code2, CheckCircle2, Zap, Calendar } from 'lucide-react';
 import Link from 'next/link';
@@ -30,7 +30,7 @@ export default function StudentTasksPage() {
   const handleMarkCompleted = async (task: TaskItem) => {
     if (!user) return;
     setCompletedTaskIds((prev) => [...prev, task.id]);
-    await markTaskCompleteInFirestore(user.uid, task);
+    await markTaskCompleteInSupabase(user.uid, task);
     triggerGoldConfetti();
     setSelectedTask(null);
   };

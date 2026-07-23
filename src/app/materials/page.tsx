@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { fetchTopics, fetchMaterials } from '@/services/firebaseService';
+import { fetchTopics, fetchMaterials } from '@/services/supabaseService';
 import { StudyTopic, StudyMaterial } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import {

@@ -1,20 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  User as FirebaseUser,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/config';
+import { supabase } from '@/lib/supabase/client';
+import { fetchUserProfile } from '@/services/supabaseService';
 import { UserProfile } from '@/types';
 
 interface AuthContextType {
   user: UserProfile | null;
-  firebaseUser: FirebaseUser | null;
   loading: boolean;
   signIn: (usernameOrEmail: string, pass: string) => Promise<UserProfile | null>;
   signUpStudent: (data: {
@@ -31,11 +23,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check saved session in localStorage
+    // Read saved user session from localStorage
     const savedUser = localStorage.getItem('skilldev_production_user');
     if (savedUser) {
       try {
@@ -45,25 +36,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (fUser) => {
-      setFirebaseUser(fUser);
-      if (fUser) {
-        try {
-          const userRef = doc(db, 'users', fUser.uid);
-          const snap = await getDoc(userRef);
-          if (snap.exists()) {
-            const profile = snap.data() as UserProfile;
-            setUser(profile);
-            localStorage.setItem('skilldev_production_user', JSON.stringify(profile));
-          }
-        } catch (err) {
-          console.error('Error reading user profile on auth change:', err);
+    // Subscribe to Supabase Auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        if (profile) {
+          setUser(profile);
+          localStorage.setItem('skilldev_production_user', JSON.stringify(profile));
         }
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    setLoading(false);
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (usernameOrEmail: string, pass: string): Promise<UserProfile | null> => {
@@ -74,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const envAdminPass = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin@12345';
     const cleanInput = usernameOrEmail.trim().toLowerCase();
 
-    // Check if input matches configured Admin credentials
+    // Check Admin credentials
     const isAdminInput =
       cleanInput === envAdminUser.toLowerCase() ||
       cleanInput === `${envAdminUser.toLowerCase()}@skilldev.io` ||
@@ -100,15 +88,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return resolvedUser;
     }
 
-    // Otherwise attempt standard Student Firebase Authentication
+    // Supabase Auth Email/Password Sign In
     try {
-      const creds = await signInWithEmailAndPassword(auth, usernameOrEmail, pass);
-      const snap = await getDoc(doc(db, 'users', creds.user.uid));
-      if (snap.exists()) {
-        resolvedUser = snap.data() as UserProfile;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: usernameOrEmail,
+        password: pass,
+      });
+
+      if (!error && data.user) {
+        resolvedUser = await fetchUserProfile(data.user.id);
       }
     } catch (err) {
-      console.warn('Firebase auth failure:', err);
+      console.warn('Supabase Auth error:', err);
     }
 
     if (resolvedUser) {
@@ -131,15 +122,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let newProfile: UserProfile;
 
     try {
-      const creds = await createUserWithEmailAndPassword(auth, data.email, data.pass);
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.pass,
+      });
+
+      const uid = authData.user?.id || `student-${Date.now()}`;
+
       newProfile = {
-        uid: creds.user.uid,
+        uid,
         email: data.email,
         displayName: data.name,
         role: 'student',
         college: data.college,
         year: data.year,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${creds.user.uid}`,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
         level: 1,
         xp: 0,
         currentStreak: 0,
@@ -147,9 +144,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         tasksCompletedCount: 0,
         createdAt: new Date().toISOString(),
       };
-      await setDoc(doc(db, 'users', creds.user.uid), newProfile);
+
+      await supabase.from('users').insert({
+        uid: newProfile.uid,
+        email: newProfile.email,
+        display_name: newProfile.displayName,
+        role: newProfile.role,
+        college: newProfile.college,
+        year: newProfile.year,
+        avatar_url: newProfile.avatarUrl,
+        level: newProfile.level,
+        xp: newProfile.xp,
+        current_streak: newProfile.currentStreak,
+        longest_streak: newProfile.longestStreak,
+        tasks_completed_count: newProfile.tasksCompletedCount,
+        created_at: newProfile.createdAt,
+      });
     } catch (err) {
-      console.warn('Local student registration fallback:', err);
+      console.warn('Supabase student registration fallback:', err);
       newProfile = {
         uid: `student-${Date.now()}`,
         email: data.email,
@@ -176,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOutUser = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
     } catch (e) {
       console.error(e);
     }
@@ -188,7 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        firebaseUser,
         loading,
         signIn,
         signUpStudent,

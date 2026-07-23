@@ -5,11 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
-import { fetchTopics } from '@/services/firebaseService';
+import { fetchTopics } from '@/services/supabaseService';
 import { StudyTopic, CategoryType } from '@/types';
 import { FolderTree, Plus, Edit2, Trash2, BookOpen } from 'lucide-react';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { supabase } from '@/lib/supabase/client';
 
 export default function AdminTopicsPage() {
   const [topics, setTopics] = useState<StudyTopic[]>([]);
@@ -43,7 +42,14 @@ export default function AdminTopicsPage() {
       createdAt: editingTopic?.createdAt || new Date().toISOString(),
     };
 
-    await setDoc(doc(db, 'topics', topicId), newTopic);
+    await supabase.from('topics').upsert({
+      id: topicId,
+      name: newTopic.name,
+      category: newTopic.category,
+      description: newTopic.description,
+      resource_count: newTopic.resourceCount,
+      created_at: newTopic.createdAt,
+    });
 
     if (editingTopic) {
       setTopics(topics.map((t) => (t.id === topicId ? newTopic : t)));
@@ -58,7 +64,7 @@ export default function AdminTopicsPage() {
   };
 
   const handleDelete = async (topicId: string) => {
-    await deleteDoc(doc(db, 'topics', topicId));
+    await supabase.from('topics').delete().eq('id', topicId);
     setTopics(topics.filter((t) => t.id !== topicId));
   };
 

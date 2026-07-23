@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
-import { fetchTopics, fetchMaterials, uploadFileToFirebaseStorage } from '@/services/firebaseService';
+import { fetchTopics, fetchMaterials, uploadFileToSupabaseStorage } from '@/services/supabaseService';
 import { StudyTopic, StudyMaterial, MaterialProvider } from '@/types';
 import {
   BookOpen,
@@ -13,15 +13,11 @@ import {
   Search,
   FileText,
   Video,
-  Code,
   FolderTree,
   ExternalLink,
   Trash2,
-  Edit2,
-  CheckCircle2,
 } from 'lucide-react';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { supabase } from '@/lib/supabase/client';
 
 export default function AdminMaterialsPage() {
   const [topics, setTopics] = useState<StudyTopic[]>([]);
@@ -61,7 +57,7 @@ export default function AdminMaterialsPage() {
     try {
       let finalUrl = url;
       if (materialType === 'pdf' && file) {
-        finalUrl = await uploadFileToFirebaseStorage(file, 'materials');
+        finalUrl = await uploadFileToSupabaseStorage(file, 'materials');
       }
 
       const newMaterial: StudyMaterial = {
@@ -76,7 +72,18 @@ export default function AdminMaterialsPage() {
         description,
       };
 
-      await setDoc(doc(db, 'materials', newMaterial.id), newMaterial);
+      await supabase.from('materials').insert({
+        id: newMaterial.id,
+        topic_id: newMaterial.topicId,
+        title: newMaterial.title,
+        type: newMaterial.type,
+        url: newMaterial.url,
+        provider: newMaterial.provider,
+        description: newMaterial.description,
+        created_by: newMaterial.createdBy,
+        upload_date: newMaterial.uploadDate,
+      });
+
       setMaterials([newMaterial, ...materials]);
       setIsModalOpen(false);
       setTitle('');
@@ -91,7 +98,7 @@ export default function AdminMaterialsPage() {
 
   const handleDelete = async (matId: string) => {
     try {
-      await deleteDoc(doc(db, 'materials', matId));
+      await supabase.from('materials').delete().eq('id', matId);
       setMaterials(materials.filter((m) => m.id !== matId));
     } catch (e) {
       console.error(e);
