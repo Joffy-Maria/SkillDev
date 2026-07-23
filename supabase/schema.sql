@@ -81,35 +81,10 @@ CREATE TABLE IF NOT EXISTS public.performers (
   published_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS)
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.progress ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.topics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.performers ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if re-running
-DROP POLICY IF EXISTS "Public All Access Users" ON public.users;
-DROP POLICY IF EXISTS "Public All Access Tasks" ON public.tasks;
-DROP POLICY IF EXISTS "Public All Access Progress" ON public.progress;
-DROP POLICY IF EXISTS "Public All Access Topics" ON public.topics;
-DROP POLICY IF EXISTS "Public All Access Materials" ON public.materials;
-DROP POLICY IF EXISTS "Public All Access Performers" ON public.performers;
-
-DROP POLICY IF EXISTS "Public Read Users" ON public.users;
-DROP POLICY IF EXISTS "Users Update Self" ON public.users;
-DROP POLICY IF EXISTS "Public Read Tasks" ON public.tasks;
-DROP POLICY IF EXISTS "Public Read Progress" ON public.progress;
-DROP POLICY IF EXISTS "Student Insert Progress" ON public.progress;
-DROP POLICY IF EXISTS "Public Read Topics" ON public.topics;
-DROP POLICY IF EXISTS "Public Read Materials" ON public.materials;
-DROP POLICY IF EXISTS "Public Read Performers" ON public.performers;
-
--- Enable Full Read & Write Access Policies for Application API
-CREATE POLICY "Public All Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public All Access Tasks" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public All Access Progress" ON public.progress FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public All Access Topics" ON public.topics FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public All Access Materials" ON public.materials FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public All Access Performers" ON public.performers FOR ALL USING (true) WITH CHECK (true);
+-- Disable Row Level Security (RLS) to ensure full read/write REST API access
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.progress DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.topics DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.performers DISABLE ROW LEVEL SECURITY;
