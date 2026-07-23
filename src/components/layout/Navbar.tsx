@@ -137,7 +137,7 @@ export const Navbar: React.FC = () => {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=128&q=80'}
+              src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'user'}`}
               alt={user?.displayName || 'User'}
               className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#C9A227]/40"
             />

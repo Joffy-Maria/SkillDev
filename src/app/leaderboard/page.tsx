@@ -16,7 +16,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     async function loadLeaderboard() {
       const list = await fetchAllStudents();
-      if (user && !list.find((s) => s.uid === user.uid)) {
+      if (user && user.role === 'student' && !list.find((s) => s.uid === user.uid)) {
         list.push(user);
       }
       const sorted = list.sort((a, b) => (b.xp || 0) - (a.xp || 0));
@@ -86,7 +86,7 @@ export default function LeaderboardPage() {
                   <div className="relative mb-3 flex flex-col items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={top2.avatarUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80'}
+                      src={top2.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${top2.uid}`}
                       alt={top2.displayName}
                       className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-slate-400 shadow-xl"
                     />
@@ -113,7 +113,7 @@ export default function LeaderboardPage() {
                 <div className="relative mb-3 flex flex-col items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={top1.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                    src={top1.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${top1.uid}`}
                     alt={top1.displayName}
                     className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover ring-4 ring-[#C9A227] shadow-[0_0_30px_rgba(201,162,39,0.4)]"
                   />
@@ -139,7 +139,7 @@ export default function LeaderboardPage() {
                   <div className="relative mb-3 flex flex-col items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={top3.avatarUrl || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80'}
+                      src={top3.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${top3.uid}`}
                       alt={top3.displayName}
                       className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-amber-700 shadow-xl"
                     />
@@ -187,7 +187,7 @@ export default function LeaderboardPage() {
                       </span>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={student.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=128&q=80'}
+                        src={student.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.uid}`}
                         alt={student.displayName}
                         className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10"
                       />

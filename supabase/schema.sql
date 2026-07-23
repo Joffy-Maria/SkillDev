@@ -90,6 +90,13 @@ ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.performers ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if re-running
+DROP POLICY IF EXISTS "Public All Access Users" ON public.users;
+DROP POLICY IF EXISTS "Public All Access Tasks" ON public.tasks;
+DROP POLICY IF EXISTS "Public All Access Progress" ON public.progress;
+DROP POLICY IF EXISTS "Public All Access Topics" ON public.topics;
+DROP POLICY IF EXISTS "Public All Access Materials" ON public.materials;
+DROP POLICY IF EXISTS "Public All Access Performers" ON public.performers;
+
 DROP POLICY IF EXISTS "Public Read Users" ON public.users;
 DROP POLICY IF EXISTS "Users Update Self" ON public.users;
 DROP POLICY IF EXISTS "Public Read Tasks" ON public.tasks;
@@ -99,14 +106,10 @@ DROP POLICY IF EXISTS "Public Read Topics" ON public.topics;
 DROP POLICY IF EXISTS "Public Read Materials" ON public.materials;
 DROP POLICY IF EXISTS "Public Read Performers" ON public.performers;
 
--- Public & Student Policies
-CREATE POLICY "Public Read Users" ON public.users FOR SELECT USING (true);
-CREATE POLICY "Users Update Self" ON public.users FOR UPDATE USING (auth.uid()::text = uid);
-
-CREATE POLICY "Public Read Tasks" ON public.tasks FOR SELECT USING (true);
-CREATE POLICY "Public Read Progress" ON public.progress FOR SELECT USING (true);
-CREATE POLICY "Student Insert Progress" ON public.progress FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Public Read Topics" ON public.topics FOR SELECT USING (true);
-CREATE POLICY "Public Read Materials" ON public.materials FOR SELECT USING (true);
-CREATE POLICY "Public Read Performers" ON public.performers FOR SELECT USING (true);
+-- Enable Full Read & Write Access Policies for Application API
+CREATE POLICY "Public All Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public All Access Tasks" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public All Access Progress" ON public.progress FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public All Access Topics" ON public.topics FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public All Access Materials" ON public.materials FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public All Access Performers" ON public.performers FOR ALL USING (true) WITH CHECK (true);
