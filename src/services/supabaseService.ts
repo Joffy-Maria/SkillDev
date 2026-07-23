@@ -50,11 +50,10 @@ export const fetchUserProfile = async (uid: string): Promise<UserProfile | null>
 };
 
 export const fetchAllStudents = async (): Promise<UserProfile[]> => {
-  let dbStudents: UserProfile[] = [];
   try {
     const { data, error } = await supabase.from('users').select('*').eq('role', 'student');
     if (!error && data) {
-      dbStudents = data.map((d) => ({
+      const list = data.map((d) => ({
         uid: d.uid,
         email: d.email,
         displayName: d.display_name,
@@ -70,36 +69,29 @@ export const fetchAllStudents = async (): Promise<UserProfile[]> => {
         bio: d.bio,
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_students', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase students:', err);
   }
 
-  let localStudents: UserProfile[] = [];
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('skilldev_persisted_students');
     if (saved) {
-      try { localStudents = JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
   }
-
-  const map = new Map<string, UserProfile>();
-  localStudents.forEach((s) => map.set(s.uid, s));
-  dbStudents.forEach((s) => map.set(s.uid, s));
-  const merged = Array.from(map.values());
-
-  if (typeof window !== 'undefined' && merged.length > 0) {
-    localStorage.setItem('skilldev_persisted_students', JSON.stringify(merged));
-  }
-  return merged;
+  return [];
 };
 
 export const fetchTasks = async (): Promise<TaskItem[]> => {
-  let dbTasks: TaskItem[] = [];
   try {
-    const { data, error } = await supabase.from('tasks').select('*');
+    const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
     if (!error && data) {
-      dbTasks = data.map((d) => ({
+      const list = data.map((d) => ({
         id: d.id,
         title: d.title,
         description: d.description,
@@ -114,6 +106,10 @@ export const fetchTasks = async (): Promise<TaskItem[]> => {
         createdBy: d.created_by || 'Admin',
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(list));
+      }
+      return list;
     } else if (error) {
       console.warn('Supabase fetchTasks notice:', error.message);
     }
@@ -121,33 +117,16 @@ export const fetchTasks = async (): Promise<TaskItem[]> => {
     console.error('Error fetching Supabase tasks:', err);
   }
 
-  let localTasks: TaskItem[] = [];
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('skilldev_persisted_tasks');
     if (saved) {
-      try { localTasks = JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
   }
-
-  const map = new Map<string, TaskItem>();
-  localTasks.forEach((t) => map.set(t.id, t));
-  dbTasks.forEach((t) => map.set(t.id, t));
-  const merged = Array.from(map.values());
-
-  if (typeof window !== 'undefined' && merged.length > 0) {
-    localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(merged));
-  }
-  return merged;
+  return [];
 };
 
 export const createTaskInSupabase = async (task: TaskItem): Promise<{ success: boolean; error?: string }> => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('skilldev_persisted_tasks');
-    let list: TaskItem[] = saved ? JSON.parse(saved) : [];
-    list = [task, ...list.filter((t) => t.id !== task.id)];
-    localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(list));
-  }
-
   try {
     const payload: any = {
       id: task.id,
@@ -160,16 +139,23 @@ export const createTaskInSupabase = async (task: TaskItem): Promise<{ success: b
       starter_code: task.starterCode || null,
       test_cases: task.testCases || null,
       deadline: task.deadline || 'Today midnight',
-      is_archived: task.isArchived || false,
-      created_at: task.createdAt,
+      is_archived: false,
     };
 
-    const { error } = await supabase.from('tasks').insert(payload);
+    const { error } = await supabase.from('tasks').insert(payload).select();
 
     if (error) {
       console.error('Supabase task insert error:', error.message);
       return { success: false, error: error.message };
     }
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('skilldev_persisted_tasks');
+      let list: TaskItem[] = saved ? JSON.parse(saved) : [];
+      list = [task, ...list.filter((t) => t.id !== task.id)];
+      localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(list));
+    }
+
     return { success: true };
   } catch (err: any) {
     console.error('Error inserting task into Supabase:', err);
@@ -236,11 +222,10 @@ export const markTaskCompleteInSupabase = async (
 };
 
 export const fetchTopics = async (): Promise<StudyTopic[]> => {
-  let dbTopics: StudyTopic[] = [];
   try {
     const { data, error } = await supabase.from('topics').select('*');
     if (!error && data) {
-      dbTopics = data.map((d) => ({
+      const list = data.map((d) => ({
         id: d.id,
         name: d.name,
         category: d.category,
@@ -248,36 +233,29 @@ export const fetchTopics = async (): Promise<StudyTopic[]> => {
         resourceCount: d.resource_count,
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_topics', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase topics:', err);
   }
 
-  let localTopics: StudyTopic[] = [];
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('skilldev_persisted_topics');
     if (saved) {
-      try { localTopics = JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
   }
-
-  const map = new Map<string, StudyTopic>();
-  localTopics.forEach((t) => map.set(t.id, t));
-  dbTopics.forEach((t) => map.set(t.id, t));
-  const merged = Array.from(map.values());
-
-  if (typeof window !== 'undefined' && merged.length > 0) {
-    localStorage.setItem('skilldev_persisted_topics', JSON.stringify(merged));
-  }
-  return merged;
+  return [];
 };
 
 export const fetchMaterials = async (): Promise<StudyMaterial[]> => {
-  let dbMaterials: StudyMaterial[] = [];
   try {
     const { data, error } = await supabase.from('materials').select('*');
     if (!error && data) {
-      dbMaterials = data.map((d) => ({
+      const list = data.map((d) => ({
         id: d.id,
         topicId: d.topic_id,
         title: d.title,
@@ -288,28 +266,22 @@ export const fetchMaterials = async (): Promise<StudyMaterial[]> => {
         createdBy: d.created_by,
         uploadDate: d.upload_date,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_materials', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase materials:', err);
   }
 
-  let localMaterials: StudyMaterial[] = [];
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('skilldev_persisted_materials');
     if (saved) {
-      try { localMaterials = JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
   }
-
-  const map = new Map<string, StudyMaterial>();
-  localMaterials.forEach((m) => map.set(m.id, m));
-  dbMaterials.forEach((m) => map.set(m.id, m));
-  const merged = Array.from(map.values());
-
-  if (typeof window !== 'undefined' && merged.length > 0) {
-    localStorage.setItem('skilldev_persisted_materials', JSON.stringify(merged));
-  }
-  return merged;
+  return [];
 };
 
 export const uploadFileToSupabaseStorage = async (file: File, bucket: string): Promise<string> => {
