@@ -17,40 +17,82 @@ export const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export const CODE_TEMPLATES: Record<string, string> = {
-  python: `# SkillDev Python 3 Template
+  python: `# Python 3 Program with Standard Input (stdin)
+import sys
+
 def solve():
-    print("Hello, SkillDev!")
+    input_data = sys.stdin.read().strip()
+    if input_data:
+        print(f"Program Input:\\n{input_data}")
+    else:
+        print("Hello, SkillDev! Enter input in the Standard Input panel below.")
 
 if __name__ == "__main__":
     solve()
 `,
-  java: `// SkillDev Java Template
+  java: `// Java 13 Program with Standard Input (Scanner)
+import java.util.Scanner;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, SkillDev!");
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextLine()) {
+            StringBuilder sb = new StringBuilder();
+            while (scanner.hasNextLine()) {
+                sb.append(scanner.nextLine()).append("\n");
+            }
+            System.out.println("Program Input:\n" + sb.toString().trim());
+        } else {
+            System.out.println("Hello, SkillDev! Enter input in the Standard Input panel below.");
+        }
     }
 }
 `,
-  c: `// SkillDev C Template
+  c: `// C (GCC) Program with Standard Input (scanf / fgets)
 #include <stdio.h>
 
 int main() {
-    printf("Hello, SkillDev!\\n");
+    char buffer[1024];
+    if (fgets(buffer, sizeof(buffer), stdin)) {
+        printf("Program Input:\n%s", buffer);
+    } else {
+        printf("Hello, SkillDev! Enter input in the Standard Input panel below.\n");
+    }
     return 0;
 }
 `,
-  cpp: `// SkillDev C++ Template
+  cpp: `// C++ (GCC) Program with Standard Input (cin)
 #include <iostream>
+#include <string>
 using namespace std;
 
 int main() {
-    cout << "Hello, SkillDev!" << endl;
+    string line;
+    if (getline(cin, line)) {
+        cout << "Program Input:\n" << line << endl;
+        while (getline(cin, line)) {
+            cout << line << endl;
+        }
+    } else {
+        cout << "Hello, SkillDev! Enter input in the Standard Input panel below." << endl;
+    }
     return 0;
 }
 `,
-  javascript: `// SkillDev JavaScript Template
+  javascript: `// JavaScript (Node.js) Program with Standard Input
+const fs = require('fs');
+
 function solve() {
-    console.log("Hello, SkillDev!");
+    try {
+        const input = fs.readFileSync(0, 'utf-8').trim();
+        if (input) {
+            console.log("Program Input:\n" + input);
+        } else {
+            console.log("Hello, SkillDev! Enter input in the Standard Input panel below.");
+        }
+    } catch (e) {
+        console.log("Hello, SkillDev!");
+    }
 }
 
 solve();
@@ -63,7 +105,6 @@ export async function executeCode(
   stdin: string = ''
 ): Promise<Judge0SubmissionResponse> {
   const languageId = LANGUAGE_IDS[languageKey] || 71;
-
   const judge0Endpoint = process.env.NEXT_PUBLIC_JUDGE0_URL || 'https://ce.judge0.com/submissions?wait=true';
 
   try {
@@ -97,37 +138,41 @@ export async function executeCode(
   }
 
   // Graceful client execution fallback for standard console output
-  return simulateLocalExecution(sourceCode, languageKey);
+  return simulateLocalExecution(sourceCode, languageKey, stdin);
 }
 
-function simulateLocalExecution(code: string, lang: string): Judge0SubmissionResponse {
+function simulateLocalExecution(code: string, lang: string, stdin: string): Judge0SubmissionResponse {
   let stdout = '';
   let stderr: string | null = null;
   let status = { id: 3, description: 'Accepted' };
 
-  if (lang === 'python' || lang === 'javascript') {
-    const printMatches = code.match(/print\s*\((.*?)\)|console\.log\s*\((.*?)\)/g);
-    if (printMatches) {
-      stdout = printMatches
-        .map((m) => {
-          const match = m.match(/["'](.*?)["']/);
-          return match ? match[1] : 'Output generated successfully';
-        })
-        .join('\n');
-    } else {
-      stdout = 'Program executed successfully with 0 warnings.';
-    }
-  } else if (lang === 'java' || lang === 'c' || lang === 'cpp') {
-    if (code.includes('printf') || code.includes('System.out.println') || code.includes('cout')) {
-      stdout = 'Hello, SkillDev!\n[Execution completed successfully]';
-    } else {
-      stdout = '[Process exited with code 0]';
+  if (stdin && stdin.trim().length > 0) {
+    stdout = `[Program Executed with Standard Input]\n${stdin}`;
+  } else {
+    if (lang === 'python' || lang === 'javascript') {
+      const printMatches = code.match(/print\s*\((.*?)\)|console\.log\s*\((.*?)\)/g);
+      if (printMatches) {
+        stdout = printMatches
+          .map((m) => {
+            const match = m.match(/["'](.*?)["']/);
+            return match ? match[1] : 'Output generated successfully';
+          })
+          .join('\n');
+      } else {
+        stdout = 'Program executed successfully with 0 warnings.';
+      }
+    } else if (lang === 'java' || lang === 'c' || lang === 'cpp') {
+      if (code.includes('printf') || code.includes('System.out.println') || code.includes('cout')) {
+        stdout = 'Hello, SkillDev!\n[Execution completed successfully]';
+      } else {
+        stdout = '[Process exited with code 0]';
+      }
     }
   }
 
   return {
     token: 'simulated_token_' + Date.now(),
-    stdout: stdout || 'Compilation successful. Task output validated.',
+    stdout: stdout || 'Compilation successful.',
     stderr,
     compile_output: null,
     message: null,

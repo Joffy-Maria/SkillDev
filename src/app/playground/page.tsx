@@ -6,14 +6,29 @@ import { executeCode, CODE_TEMPLATES, LANGUAGE_NAMES } from '@/lib/judge0/servic
 import { Judge0SubmissionResponse } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Copy, Download, Trash2, Code2, Terminal, Check, Cpu, Clock } from 'lucide-react';
+import {
+  Play,
+  Copy,
+  Download,
+  Trash2,
+  Code2,
+  Terminal,
+  Check,
+  Cpu,
+  Clock,
+  FileInput,
+  AlertOctagon,
+  AlertTriangle,
+  Loader2,
+} from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function CodingPlaygroundPage() {
   const { activeCode, activeLanguage, setActiveCode, setActiveLanguage } = useAppStore();
-  const [isRunning, setIsRunning] = useState(false);
+  const [stdin, setStdin] = useState<string>('');
+  const [isRunning, setIsRunning] = useState<boolean>(false);
   const [output, setOutput] = useState<Judge0SubmissionResponse | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
 
   const handleLanguageChange = (lang: string) => {
     setActiveLanguage(lang);
@@ -25,7 +40,7 @@ export default function CodingPlaygroundPage() {
   const handleRunCode = async () => {
     setIsRunning(true);
     try {
-      const res = await executeCode(activeCode, activeLanguage);
+      const res = await executeCode(activeCode, activeLanguage, stdin);
       setOutput(res);
     } catch (err) {
       console.error(err);
@@ -41,7 +56,13 @@ export default function CodingPlaygroundPage() {
   };
 
   const handleDownload = () => {
-    const extMap: Record<string, string> = { python: 'py', java: 'java', c: 'c', cpp: 'cpp', javascript: 'js' };
+    const extMap: Record<string, string> = {
+      python: 'py',
+      java: 'java',
+      c: 'c',
+      cpp: 'cpp',
+      javascript: 'js',
+    };
     const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -52,7 +73,7 @@ export default function CodingPlaygroundPage() {
   };
 
   return (
-    <div className="space-y-6 h-[calc(100vh-6rem)] flex flex-col">
+    <div className="space-y-6 flex flex-col pb-12">
       {/* Playground Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#151518] p-4 rounded-2xl border border-white/10 shrink-0">
         <div className="flex items-center space-x-3">
@@ -61,7 +82,7 @@ export default function CodingPlaygroundPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">Monaco Coding Playground</h1>
-            <p className="text-xs text-zinc-400">Live execution powered by Judge0 REST Engine</p>
+            <p className="text-xs text-zinc-400">Interactive execution engine with Standard Input (stdin) support</p>
           </div>
         </div>
 
@@ -91,20 +112,30 @@ export default function CodingPlaygroundPage() {
           </Button>
 
           <Button variant="gold" size="sm" onClick={handleRunCode} isLoading={isRunning}>
-            <Play className="w-4 h-4 mr-1 fill-black" /> Run Code
+            {isRunning ? (
+              <span className="flex items-center gap-1">
+                <Loader2 className="w-4 h-4 animate-spin text-black" /> Running...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <Play className="w-4 h-4 fill-black" /> Run Code
+              </span>
+            )}
           </Button>
         </div>
       </div>
 
-      {/* Editor & Console Split Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-        {/* Monaco Editor Container */}
-        <div className="lg:col-span-2 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e1e] flex flex-col">
+      {/* Editor & Input Workspace Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Monaco Editor Container (Spans 2 columns) */}
+        <div className="lg:col-span-2 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e1e] flex flex-col min-h-[450px]">
           <div className="px-4 py-2 bg-[#181818] border-b border-white/5 flex items-center justify-between text-xs text-zinc-400 font-mono">
-            <span>VS Code Dark Theme</span>
-            <span>Auto Save Enabled</span>
+            <span className="flex items-center gap-2">
+              <Code2 className="w-3.5 h-3.5 text-[#C9A227]" /> Monaco Code Editor ({LANGUAGE_NAMES[activeLanguage] || activeLanguage})
+            </span>
+            <span className="text-[10px] text-zinc-500 font-mono">VS Dark Theme</span>
           </div>
-          <div className="flex-1 min-h-[350px]">
+          <div className="flex-1 min-h-[420px]">
             <Editor
               height="100%"
               language={activeLanguage === 'cpp' ? 'cpp' : activeLanguage}
@@ -123,75 +154,142 @@ export default function CodingPlaygroundPage() {
           </div>
         </div>
 
-        {/* Output Console Panel */}
-        <Card className="flex flex-col p-4 bg-[#111113] border border-white/10 font-mono text-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 text-zinc-400">
-            <span className="flex items-center gap-2 font-bold text-white">
-              <Terminal className="w-4 h-4 text-[#C9A227]" /> Output Console
+        {/* Right Side: Standard Input Panel */}
+        <Card className="flex flex-col p-4 bg-[#111113] border border-white/10 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-white/10 text-zinc-400">
+            <span className="flex items-center gap-2 font-bold text-white text-xs">
+              <FileInput className="w-4 h-4 text-[#C9A227]" /> Standard Input (stdin)
             </span>
-            {output && (
+            {stdin && (
               <button
-                onClick={() => setOutput(null)}
-                className="text-zinc-500 hover:text-zinc-300 p-1"
-                title="Clear console"
+                onClick={() => setStdin('')}
+                className="text-zinc-500 hover:text-zinc-300 text-[11px] hover:underline"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                Clear
               </button>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3">
-            {!output ? (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-center py-12 space-y-2 font-sans">
-                <Terminal className="w-8 h-8 opacity-40 text-[#C9A227]" />
-                <p>Click &quot;Run Code&quot; to execute your solution via Judge0 API.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Execution Status Badge */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold ${
-                      output.status?.id === 3
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                    }`}
-                  >
-                    {output.status?.description || 'Executed'}
-                  </span>
+          <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+            Pass multiple lines of user input to interactive programs (<code className="text-[#C9A227]">input()</code>, <code className="text-[#C9A227]">Scanner</code>, <code className="text-[#C9A227]">scanf</code>, <code className="text-[#C9A227]">cin</code>).
+          </p>
 
-                  <div className="flex items-center space-x-3 text-[11px] text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-[#C9A227]" /> {output.time}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Cpu className="w-3 h-3 text-[#C9A227]" /> {output.memory} KB
-                    </span>
-                  </div>
+          <textarea
+            rows={12}
+            value={stdin}
+            onChange={(e) => setStdin(e.target.value)}
+            placeholder="Enter your program input here..."
+            className="w-full bg-[#151518] border border-white/10 rounded-xl p-3 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-[#C9A227] leading-relaxed resize-none flex-1"
+          />
+
+          <Button variant="gold" className="w-full mt-2" onClick={handleRunCode} isLoading={isRunning}>
+            {isRunning ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-black" /> Executing Code...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <Play className="w-4 h-4 fill-black" /> Run Code
+              </span>
+            )}
+          </Button>
+        </Card>
+      </div>
+
+      {/* Program Output Panel (Terminal Style) */}
+      <Card className="p-4 bg-[#111113] border border-white/10 font-mono text-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 text-zinc-400">
+          <span className="flex items-center gap-2 font-bold text-white text-sm">
+            <Terminal className="w-5 h-5 text-[#C9A227]" /> Program Output Console
+          </span>
+
+          <div className="flex items-center space-x-3">
+            {output && (
+              <>
+                <div className="flex items-center space-x-3 text-[11px] text-zinc-400 font-mono">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#C9A227]" /> {output.time}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Cpu className="w-3.5 h-3.5 text-[#C9A227]" /> {output.memory} KB
+                  </span>
                 </div>
 
-                {/* Standard Output */}
-                {output.stdout && (
-                  <div className="p-3 rounded-xl bg-[#151518] border border-white/5 space-y-1">
-                    <p className="text-[10px] uppercase text-zinc-500 font-bold">Standard Output</p>
-                    <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed">{output.stdout}</pre>
-                  </div>
-                )}
+                <button
+                  onClick={() => setOutput(null)}
+                  className="text-zinc-500 hover:text-zinc-300 p-1 rounded hover:bg-white/5"
+                  title="Clear Console"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
-                {/* Standard Error or Compile Output */}
-                {(output.stderr || output.compile_output) && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-1">
-                    <p className="text-[10px] uppercase text-rose-400 font-bold">Execution Error</p>
-                    <pre className="text-rose-300 whitespace-pre-wrap leading-relaxed">
-                      {output.stderr || output.compile_output}
-                    </pre>
-                  </div>
-                )}
+        {isRunning ? (
+          <div className="py-12 flex flex-col items-center justify-center space-y-3 text-zinc-400">
+            <Loader2 className="w-8 h-8 animate-spin text-[#C9A227]" />
+            <p className="text-xs font-mono">Compiling and executing via Judge0 engine...</p>
+          </div>
+        ) : !output ? (
+          <div className="py-10 text-center text-zinc-600 space-y-2 font-sans">
+            <Terminal className="w-8 h-8 opacity-40 text-[#C9A227] mx-auto" />
+            <p className="text-xs text-zinc-400">Click &quot;Run Code&quot; above to execute your solution with standard input.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Status Header Badge */}
+            <div className="flex items-center space-x-2">
+              <span
+                className={`px-3 py-1 rounded-lg text-xs font-bold font-mono ${
+                  output.status?.id === 3
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                {output.status?.description || 'Executed'}
+              </span>
+            </div>
+
+            {/* Standard Output Panel */}
+            {output.stdout && (
+              <div className="p-4 rounded-xl bg-[#151518] border border-white/10 space-y-2">
+                <p className="text-[11px] uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5 font-sans">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> Standard Output
+                </p>
+                <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed font-mono overflow-x-auto">
+                  {output.stdout}
+                </pre>
+              </div>
+            )}
+
+            {/* Compiler Errors Panel (Red Terminal Style Box) */}
+            {output.compile_output && (
+              <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-600/40 space-y-2 shadow-inner">
+                <p className="text-[11px] uppercase tracking-wider text-rose-400 font-bold flex items-center gap-1.5 font-sans">
+                  <AlertOctagon className="w-4 h-4 text-rose-500" /> Compiler Error
+                </p>
+                <pre className="text-rose-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto bg-black/40 p-3 rounded-lg border border-rose-500/20">
+                  {output.compile_output}
+                </pre>
+              </div>
+            )}
+
+            {/* Runtime Errors Panel (Red Terminal Style Box) */}
+            {output.stderr && (
+              <div className="p-4 rounded-xl bg-amber-950/40 border border-rose-500/40 space-y-2 shadow-inner">
+                <p className="text-[11px] uppercase tracking-wider text-rose-400 font-bold flex items-center gap-1.5 font-sans">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" /> Runtime Error (stderr)
+                </p>
+                <pre className="text-rose-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto bg-black/40 p-3 rounded-lg border border-rose-500/20">
+                  {output.stderr}
+                </pre>
               </div>
             )}
           </div>
-        </Card>
-      </div>
+        )}
+      </Card>
     </div>
   );
 }
