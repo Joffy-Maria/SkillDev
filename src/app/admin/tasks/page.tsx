@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { fetchTasks, createTaskInSupabase, deleteTaskInSupabase } from '@/services/supabaseService';
 import { TaskItem, TaskDifficulty, TaskType, CategoryType } from '@/types';
-import { CheckSquare, Plus, Trash2, Zap, Clock, AlertTriangle } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, Zap, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // Form states
@@ -23,17 +24,19 @@ export default function AdminTasksPage() {
   const [xpReward, setXpReward] = useState(20);
   const [deadline, setDeadline] = useState('');
 
+  const loadTasks = async () => {
+    const list = await fetchTasks();
+    setTasks(list);
+  };
+
   useEffect(() => {
-    async function loadTasks() {
-      const list = await fetchTasks();
-      setTasks(list);
-    }
     loadTasks();
   }, []);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setApiError(null);
+    setIsSubmitting(true);
 
     const newTask: TaskItem = {
       id: `task-${Date.now()}`,
@@ -49,20 +52,29 @@ export default function AdminTasksPage() {
       createdAt: new Date().toISOString(),
     };
 
-    const result = await createTaskInSupabase(newTask);
-    if (!result.success && result.error) {
-      setApiError(result.error);
-    }
+    try {
+      const result = await createTaskInSupabase(newTask);
 
-    setTasks([newTask, ...tasks]);
-    setIsModalOpen(false);
-    setTitle('');
-    setDescription('');
+      if (!result.success && result.error) {
+        setApiError(result.error);
+        alert(`Supabase Insert Error: ${result.error}`);
+      } else {
+        await loadTasks();
+        setIsModalOpen(false);
+        setTitle('');
+        setDescription('');
+      }
+    } catch (err: any) {
+      setApiError(err.message || 'Failed to insert task');
+      alert(`Error: ${err.message || 'Failed to insert task'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     await deleteTaskInSupabase(taskId);
-    setTasks(tasks.filter((t) => t.id !== taskId));
+    await loadTasks();
   };
 
   return (
@@ -84,9 +96,9 @@ export default function AdminTasksPage() {
       </div>
 
       {apiError && (
-        <div className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-          <span>Supabase Notice: {apiError}. (Task is cached locally for session).</span>
+        <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+          <span>Database Insert Error: {apiError}</span>
         </div>
       )}
 
@@ -213,8 +225,14 @@ export default function AdminTasksPage() {
             </div>
           </div>
 
-          <Button type="submit" variant="gold" className="w-full">
-            Publish Task to Students
+          <Button type="submit" variant="gold" className="w-full" isLoading={isSubmitting}>
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Publishing to Supabase...
+              </span>
+            ) : (
+              'Publish Task to Students'
+            )}
           </Button>
         </form>
       </Modal>
