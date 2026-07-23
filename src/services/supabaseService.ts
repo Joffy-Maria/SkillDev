@@ -9,13 +9,13 @@ import {
 } from '@/types';
 import { calculateLevel } from '@/lib/utils';
 
-// --- Production Supabase Database & Storage Service API ---
+// --- Production Supabase Database & Storage Service API with Dual Storage Persistence ---
 
 export const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase.from('users').select('*').eq('uid', uid).single();
     if (!error && data) {
-      return {
+      const profile = {
         uid: data.uid,
         email: data.email,
         displayName: data.display_name,
@@ -31,9 +31,20 @@ export const fetchUserProfile = async (uid: string): Promise<UserProfile | null>
         bio: data.bio,
         createdAt: data.created_at,
       } as UserProfile;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`skilldev_user_${uid}`, JSON.stringify(profile));
+      }
+      return profile;
     }
   } catch (err) {
     console.error('Error fetching Supabase user profile:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(`skilldev_user_${uid}`);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return null;
 };
@@ -41,8 +52,8 @@ export const fetchUserProfile = async (uid: string): Promise<UserProfile | null>
 export const fetchAllStudents = async (): Promise<UserProfile[]> => {
   try {
     const { data, error } = await supabase.from('users').select('*').eq('role', 'student');
-    if (!error && data) {
-      return data.map((d) => ({
+    if (!error && data && data.length > 0) {
+      const list = data.map((d) => ({
         uid: d.uid,
         email: d.email,
         displayName: d.display_name,
@@ -58,9 +69,20 @@ export const fetchAllStudents = async (): Promise<UserProfile[]> => {
         bio: d.bio,
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_students', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase students:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_students');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return [];
 };
@@ -68,8 +90,8 @@ export const fetchAllStudents = async (): Promise<UserProfile[]> => {
 export const fetchTasks = async (): Promise<TaskItem[]> => {
   try {
     const { data, error } = await supabase.from('tasks').select('*');
-    if (!error && data) {
-      return data.map((d) => ({
+    if (!error && data && data.length > 0) {
+      const list = data.map((d) => ({
         id: d.id,
         title: d.title,
         description: d.description,
@@ -84,33 +106,72 @@ export const fetchTasks = async (): Promise<TaskItem[]> => {
         createdBy: d.created_by || 'Admin',
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase tasks:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_tasks');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return [];
 };
 
 export const createTaskInSupabase = async (task: TaskItem): Promise<void> => {
-  await supabase.from('tasks').insert({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    category: task.category || 'dsa',
-    difficulty: task.difficulty,
-    type: task.type,
-    xp_reward: task.xpReward,
-    starter_code: task.starterCode,
-    test_cases: task.testCases,
-    deadline: task.deadline,
-    is_archived: task.isArchived || false,
-    created_by: task.createdBy || 'Admin',
-    created_at: task.createdAt,
-  });
+  // Persist locally immediately so task never vanishes
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_tasks');
+    let list: TaskItem[] = saved ? JSON.parse(saved) : [];
+    list = [task, ...list.filter((t) => t.id !== task.id)];
+    localStorage.setItem('skilldev_persisted_tasks', JSON.stringify(list));
+  }
+
+  try {
+    const { error } = await supabase.from('tasks').insert({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      category: task.category || 'dsa',
+      difficulty: task.difficulty,
+      type: task.type,
+      xp_reward: task.xpReward,
+      starter_code: task.starterCode,
+      test_cases: task.testCases,
+      deadline: task.deadline,
+      is_archived: task.isArchived || false,
+      created_by: task.createdBy || 'Admin',
+      created_at: task.createdAt,
+    });
+    if (error) console.error('Supabase task insert error:', error);
+  } catch (err) {
+    console.error('Error inserting task into Supabase:', err);
+  }
 };
 
 export const deleteTaskInSupabase = async (taskId: string): Promise<void> => {
-  await supabase.from('tasks').delete().eq('id', taskId);
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_tasks');
+    if (saved) {
+      const list: TaskItem[] = JSON.parse(saved);
+      localStorage.setItem(
+        'skilldev_persisted_tasks',
+        JSON.stringify(list.filter((t) => t.id !== taskId))
+      );
+    }
+  }
+
+  try {
+    await supabase.from('tasks').delete().eq('id', taskId);
+  } catch (err) {
+    console.error('Error deleting task from Supabase:', err);
+  }
 };
 
 export const markTaskCompleteInSupabase = async (
@@ -127,23 +188,27 @@ export const markTaskCompleteInSupabase = async (
   const newXp = currentXp + addedXp;
   const newLevel = calculateLevel(newXp);
 
-  await supabase.from('progress').upsert({
-    id: progressId,
-    user_id: userId,
-    task_id: task.id,
-    status: 'completed',
-    submitted_code: submittedCode || '',
-    xp_earned: addedXp,
-    completed_at: new Date().toISOString(),
-  });
+  try {
+    await supabase.from('progress').upsert({
+      id: progressId,
+      user_id: userId,
+      task_id: task.id,
+      status: 'completed',
+      submitted_code: submittedCode || '',
+      xp_earned: addedXp,
+      completed_at: new Date().toISOString(),
+    });
 
-  await supabase.from('users').update({
-    xp: newXp,
-    level: newLevel,
-    current_streak: currentStreak,
-    longest_streak: Math.max(currentStreak, existingUser?.longestStreak || 0),
-    tasks_completed_count: (existingUser?.tasksCompletedCount || 0) + 1,
-  }).eq('uid', userId);
+    await supabase.from('users').update({
+      xp: newXp,
+      level: newLevel,
+      current_streak: currentStreak,
+      longest_streak: Math.max(currentStreak, existingUser?.longestStreak || 0),
+      tasks_completed_count: (existingUser?.tasksCompletedCount || 0) + 1,
+    }).eq('uid', userId);
+  } catch (e) {
+    console.error('Error updating progress in Supabase:', e);
+  }
 
   return { newXp, newLevel, streak: currentStreak };
 };
@@ -151,8 +216,8 @@ export const markTaskCompleteInSupabase = async (
 export const fetchTopics = async (): Promise<StudyTopic[]> => {
   try {
     const { data, error } = await supabase.from('topics').select('*');
-    if (!error && data) {
-      return data.map((d) => ({
+    if (!error && data && data.length > 0) {
+      const list = data.map((d) => ({
         id: d.id,
         name: d.name,
         category: d.category,
@@ -160,9 +225,20 @@ export const fetchTopics = async (): Promise<StudyTopic[]> => {
         resourceCount: d.resource_count,
         createdAt: d.created_at,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_topics', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase topics:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_topics');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return [];
 };
@@ -170,8 +246,8 @@ export const fetchTopics = async (): Promise<StudyTopic[]> => {
 export const fetchMaterials = async (): Promise<StudyMaterial[]> => {
   try {
     const { data, error } = await supabase.from('materials').select('*');
-    if (!error && data) {
-      return data.map((d) => ({
+    if (!error && data && data.length > 0) {
+      const list = data.map((d) => ({
         id: d.id,
         topicId: d.topic_id,
         title: d.title,
@@ -182,34 +258,56 @@ export const fetchMaterials = async (): Promise<StudyMaterial[]> => {
         createdBy: d.created_by,
         uploadDate: d.upload_date,
       }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_materials', JSON.stringify(list));
+      }
+      return list;
     }
   } catch (err) {
     console.error('Error fetching Supabase materials:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_materials');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return [];
 };
 
 export const uploadFileToSupabaseStorage = async (file: File, bucket: string): Promise<string> => {
   const filePath = `${Date.now()}_${file.name}`;
-  const { data, error } = await supabase.storage.from(bucket).upload(filePath, file);
-  if (error) {
-    console.error('Supabase Storage upload error:', error);
-    return URL.createObjectURL(file);
+  try {
+    const { data, error } = await supabase.storage.from(bucket).upload(filePath, file);
+    if (!error && data) {
+      const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+      return publicUrlData.publicUrl;
+    }
+  } catch (e) {
+    console.error('Storage upload error:', e);
   }
-  const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-  return publicUrlData.publicUrl;
+  return URL.createObjectURL(file);
 };
 
 export const publishWeeklyPerformer = async (performer: WeeklyPerformer): Promise<void> => {
-  await supabase.from('performers').insert({
-    id: performer.id,
-    student_id: performer.studentId,
-    student_name: performer.studentName,
-    student_avatar: performer.studentAvatar,
-    week_label: performer.weekLabel,
-    achievement_reason: performer.achievementReason,
-    published_at: performer.publishedAt,
-  });
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('skilldev_persisted_performer', JSON.stringify(performer));
+  }
+
+  try {
+    await supabase.from('performers').insert({
+      id: performer.id,
+      student_id: performer.studentId,
+      student_name: performer.studentName,
+      student_avatar: performer.studentAvatar,
+      week_label: performer.weekLabel,
+      achievement_reason: performer.achievementReason,
+      published_at: performer.publishedAt,
+    });
+  } catch (err) {
+    console.error('Error publishing performer to Supabase:', err);
+  }
 };
 
 export const fetchWeeklyPerformer = async (): Promise<WeeklyPerformer | null> => {
@@ -221,7 +319,7 @@ export const fetchWeeklyPerformer = async (): Promise<WeeklyPerformer | null> =>
       .limit(1);
     if (!error && data && data.length > 0) {
       const d = data[0];
-      return {
+      const perf = {
         id: d.id,
         studentId: d.student_id,
         studentName: d.student_name,
@@ -230,9 +328,20 @@ export const fetchWeeklyPerformer = async (): Promise<WeeklyPerformer | null> =>
         achievementReason: d.achievement_reason,
         publishedAt: d.published_at,
       };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('skilldev_persisted_performer', JSON.stringify(perf));
+      }
+      return perf;
     }
   } catch (err) {
     console.error('Error fetching Supabase weekly performer:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('skilldev_persisted_performer');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
   }
   return null;
 };
