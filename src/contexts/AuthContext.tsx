@@ -17,6 +17,7 @@ interface AuthContextType {
     year: string;
   }) => Promise<UserProfile>;
   signOutUser: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +25,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const refreshUserProfile = async () => {
+    // If we have a user in state or local storage, fetch their latest data
+    const currentUid = user?.uid || JSON.parse(localStorage.getItem('skilldev_production_user') || '{}')?.uid;
+    if (currentUid) {
+      const profile = await fetchUserProfile(currentUid);
+      if (profile) {
+        setUser(profile);
+        localStorage.setItem('skilldev_production_user', JSON.stringify(profile));
+      }
+    }
+  };
 
   useEffect(() => {
     // Restore saved session on page load
@@ -52,6 +65,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    // Also trigger a refresh right away just in case localStorage was stale
+    refreshUserProfile();
+    
     setLoading(false);
     return () => {
       authListener?.subscription.unsubscribe();
@@ -209,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUpStudent,
         signOutUser,
+        refreshUserProfile,
       }}
     >
       {children}

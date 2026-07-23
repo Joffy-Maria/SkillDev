@@ -12,6 +12,7 @@ import {
   fetchTasks,
   fetchWeeklyPerformer,
   markTaskCompleteInSupabase,
+  fetchUserProgress,
 } from '@/services/supabaseService';
 import { TaskItem, WeeklyPerformer } from '@/types';
 import { calculateLevelProgress } from '@/lib/utils';
@@ -38,7 +39,7 @@ const MOTIVATIONAL_QUOTES = [
 ];
 
 export default function StudentDashboardPage() {
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [performer, setPerformer] = useState<WeeklyPerformer | null>(null);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
@@ -51,15 +52,23 @@ export default function StudentDashboardPage() {
       setTasks(tList);
       const perf = await fetchWeeklyPerformer();
       setPerformer(perf);
+      if (user) {
+        const completedIds = await fetchUserProgress(user.uid);
+        setCompletedTaskIds(completedIds);
+      }
     }
     loadData();
     setQuoteIndex(Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length));
-  }, []);
+  }, [user]);
 
   const handleCompleteTask = async (task: TaskItem) => {
     if (!user) return;
     setCompletedTaskIds((prev) => [...prev, task.id]);
     await markTaskCompleteInSupabase(user.uid, task);
+    
+    // Refresh user profile in context so the dashboard XP and Level instantly update
+    await refreshUserProfile();
+    
     triggerGoldConfetti();
     setActiveTaskModal(null);
   };

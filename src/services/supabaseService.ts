@@ -221,6 +221,23 @@ export const markTaskCompleteInSupabase = async (
   return { newXp, newLevel, streak: currentStreak };
 };
 
+export const fetchUserProgress = async (userId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('progress')
+      .select('task_id')
+      .eq('user_id', userId)
+      .eq('status', 'completed');
+      
+    if (!error && data) {
+      return data.map((row) => row.task_id);
+    }
+  } catch (err) {
+    console.error('Error fetching user progress:', err);
+  }
+  return [];
+};
+
 export const fetchTopics = async (): Promise<StudyTopic[]> => {
   try {
     const { data, error } = await supabase.from('topics').select('*');

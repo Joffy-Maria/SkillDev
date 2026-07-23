@@ -29,12 +29,15 @@ export default function StudentProfilePage() {
     return i >= 364 - tasksCount ? Math.min(3, Math.max(1, (i % 3) + 1)) : 0;
   });
 
-  const achievements = [
+  // Only define achievements based on actual DB usage logic
+  const allAchievements = [
     { title: 'First Solution', desc: 'Solved your 1st coding task', icon: '🚀', unlocked: tasksCount >= 1 },
     { title: '7-Day Streak', desc: 'Maintained 7 consecutive active days', icon: '🔥', unlocked: currentStreak >= 7 },
     { title: 'Century Club', desc: 'Crossed 400 total XP', icon: '⚡', unlocked: xp >= 400 },
     { title: 'DSA Architect', desc: 'Completed 15 DSA challenges', icon: '💎', unlocked: tasksCount >= 15 },
   ];
+
+  const earnedAchievements = allAchievements.filter(a => a.unlocked);
 
   return (
     <div className="space-y-8">
@@ -130,24 +133,26 @@ export default function StudentProfilePage() {
           <Award className="w-5 h-5 text-[#C9A227]" /> Unlocked Milestones &amp; Badges
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {achievements.map((ach, idx) => (
-            <Card
-              key={idx}
-              className={`p-4 border transition-all ${
-                ach.unlocked
-                  ? 'bg-gradient-to-br from-[#151518] to-[#1e1b10] border-[#C9A227]/40'
-                  : 'bg-[#111113] border-white/5 opacity-40'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-3xl">{ach.icon}</span>
-                <div>
-                  <h4 className="text-sm font-bold text-white">{ach.title}</h4>
-                  <p className="text-xs text-zinc-400 mt-0.5">{ach.desc}</p>
+          {earnedAchievements.length > 0 ? (
+            earnedAchievements.map((ach, idx) => (
+              <Card
+                key={idx}
+                className="p-4 border transition-all bg-gradient-to-br from-[#151518] to-[#1e1b10] border-[#C9A227]/40"
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="text-3xl">{ach.icon}</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{ach.title}</h4>
+                    <p className="text-xs text-zinc-400 mt-0.5">{ach.desc}</p>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full py-8 text-center text-zinc-500 font-mono text-sm border border-dashed border-white/10 rounded-2xl bg-[#111113]">
+              No badges unlocked yet. Keep completing challenges!
+            </div>
+          )}
         </div>
       </div>
     </div>

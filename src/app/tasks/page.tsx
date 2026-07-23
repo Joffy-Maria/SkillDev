@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { triggerGoldConfetti } from '@/components/ui/confetti';
 import { Modal } from '@/components/ui/modal';
-import { fetchTasks, markTaskCompleteInSupabase } from '@/services/supabaseService';
+import { fetchTasks, markTaskCompleteInSupabase, fetchUserProgress } from '@/services/supabaseService';
 import { TaskItem } from '@/types';
 import { CheckSquare, Clock, Code2, CheckCircle2, Zap, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentTasksPage() {
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [filter, setFilter] = useState<'all' | 'daily' | 'weekly' | 'completed'>('all');
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
@@ -23,14 +23,19 @@ export default function StudentTasksPage() {
     async function loadData() {
       const list = await fetchTasks();
       setTasks(list.filter((t) => !t.isArchived));
+      if (user) {
+        const completedIds = await fetchUserProgress(user.uid);
+        setCompletedTaskIds(completedIds);
+      }
     }
     loadData();
-  }, []);
+  }, [user]);
 
   const handleMarkCompleted = async (task: TaskItem) => {
     if (!user) return;
     setCompletedTaskIds((prev) => [...prev, task.id]);
     await markTaskCompleteInSupabase(user.uid, task);
+    await refreshUserProfile();
     triggerGoldConfetti();
     setSelectedTask(null);
   };
